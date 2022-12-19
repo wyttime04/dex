@@ -256,7 +256,10 @@ func (c *gitlabConnector) user(ctx context.Context, client *http.Client) (gitlab
 }
 
 type userInfo struct {
-	Groups []string
+	Groups     []string `json:"groups"`
+	Owner      []string `json:"https://gitlab.org/claims/groups/owner"`
+	Maintainer []string `json:"https://gitlab.org/claims/groups/maintainer"`
+	Developer  []string `json:"https://gitlab.org/claims/groups/developer"`
 }
 
 // userGroups queries the GitLab API for group membership.
@@ -286,6 +289,20 @@ func (c *gitlabConnector) userGroups(ctx context.Context, client *http.Client) (
 	if err := json.NewDecoder(resp.Body).Decode(&u); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %v", err)
 	}
+
+	for i, group := range u.Owner {
+		u.Owner[i] = group + ":" + "owner"
+	}
+	for i, group := range u.Maintainer {
+		u.Maintainer[i] = group + ":" + "maintainer"
+	}
+	for i, group := range u.Developer {
+		u.Developer[i] = group + ":" + "developer"
+	}
+
+	u.Groups = append(u.Groups, u.Owner...)
+	u.Groups = append(u.Groups, u.Maintainer...)
+	u.Groups = append(u.Groups, u.Developer...)
 
 	return u.Groups, nil
 }
